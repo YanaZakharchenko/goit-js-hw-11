@@ -1,46 +1,73 @@
+import Swal from 'sweetalert2';
+import { convertMs } from './convertMs';
+import { input, startButton, days, hours, minutes, seconds } from './refs';
+
 import '../../sass/timer.scss';
 
-class CountdownTimer {
-  constructor({ targetDate }) {
-    this.daysEl = document.querySelector('span[data-value="days"]');
-    this.hoursEl = document.querySelector('span[data-value="hours"]');
-    this.minsEl = document.querySelector('span[data-value="mins"]');
-    this.secsEl = document.querySelector('span[data-value="secs"]');
-    this.targetDate = targetDate;
-    this.intervalId = null;
+let time = null;
+let deadlineObject = null;
+
+startButton.disabled = true;
+
+class Timer {
+  getDeadline(event) {
+    const currentTime = Date.now();
+    const term = Date.parse(event.target.value);
+
+    time = term - currentTime;
+
+    if (term > currentTime) {
+      startButton.disabled = false;
+    }
+
+    if (term <= currentTime) {
+      Swal.fire({
+        title: 'Error!',
+        text: 'Please choose a date in the future',
+        icon: 'error',
+        confirmButtonText: 'Understood',
+      });
+
+      startButton.disabled = true;
+    }
   }
 
   start() {
-    this.intervalId = setInterval(() => {
-      const time = this.targetDate - Date.now();
-      const timeLeft = this.getTimeComponents(time);
-      this.updateClockface(timeLeft);
+    let deadline = time;
+
+    const intervalId = setInterval(() => {
+      if (deadline > 999) {
+        //Тут
+        deadline -= 1000;
+
+        deadlineObject = convertMs(deadline);
+
+        days.textContent = deadlineObject.days;
+        hours.textContent = deadlineObject.hours;
+        minutes.textContent = deadlineObject.minutes;
+        seconds.textContent = deadlineObject.seconds;
+      }
+
+      if (deadline < 1000) {
+        //Тут
+        clearInterval(intervalId);
+
+        Swal.fire({
+          title: 'Finish!',
+          text: 'The time has come',
+          icon: 'success',
+          confirmButtonText: 'Cool',
+        });
+      }
     }, 1000);
-  }
-
-  getTimeComponents(time) {
-    const days = this.pad(Math.floor(time / (1000 * 60 * 60 * 24)));
-    const hours = this.pad(Math.floor((time % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-    const mins = this.pad(Math.floor((time % (1000 * 60 * 60)) / (1000 * 60)));
-    const secs = this.pad(Math.floor((time % (1000 * 60)) / 1000));
-
-    return { days, hours, mins, secs };
-  }
-
-  pad(value) {
-    return String(value).padStart(2, '0');
-  }
-
-  updateClockface({ days, hours, mins, secs }) {
-    this.daysEl.textContent = `${days}`;
-    this.hoursEl.textContent = `${hours}`;
-    this.minsEl.textContent = `${mins}`;
-    this.secsEl.textContent = `${secs}`;
   }
 }
 
-const timer = new CountdownTimer({
-  targetDate: new Date('Jul 17, 2021'),
-});
+const timer = new Timer();
 
-timer.start();
+input.addEventListener('change', timer.getDeadline);
+startButton.addEventListener('click', () => {
+  timer.start();
+  input.disabled = true;
+  startButton.disabled = true;
+});
